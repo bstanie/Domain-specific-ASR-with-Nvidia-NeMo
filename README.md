@@ -46,75 +46,7 @@ Note, to build the image yourself, use the docker build command inside the `./ru
 ### Running from NGC NeMo ASR Application image
 If you downloaded the container image through NGC you can run the application using the docker run command explained below, also available inside the `run_app.sh` script.
 
-#### Environment variables
-We must set the following environment variables to be able to use the user interface and to set the data directory for the application to save outputs and models.
-```bash
-# Variables to enable remote UI access
-HOST_IP=`hostname -I | awk '{print $1;}'`
-UI_PORT=8060
-INPUT_PORT=8888 #port used to access notebooks
-```
-Mounting the data directory and saving it as an environment variable is necessary for the application to run. Note, the application gives you the freedom to set the data directory anywhere in your system.
-```bash
-DATA_DIR="raid/datasets/asr/data"
-```
-#### Entrypoint
-We set the entrypoint to be JupyterLab, which provides access to the application notebooks using the host ip and port.
-```bash
-ENTRY="jupyter lab --ip=0.0.0.0 --allow-root --no-browser --NotebookApp.token='' --NotebookApp.custom_display_url=http://$HOST_IP:$INPUT_PORT"
-```
-Alternatively, you can set the entry point to be the container’s terminal.
-```bash
-ENTRY="/bin/bash"
-```
-#### Docker run
-Here you can see the complete run command.
 
-```bash
-# APP settings
-DATA_DIR="raid/datasets/asr/data"
-IMAGE_NAME='nemo_asr_app_img'
-USERNAME=`whoami`
-CONTAINER_NAME='run_nemo_asr_app_cont_'$USERNAME
-ENTRY="jupyter lab --ip=0.0.0.0 --allow-root --no-browser --NotebookApp.token='' --NotebookApp.custom_display_url=http://$HOST_IP:$INPUT_PORT"
-
-# docker command
-DOCKER_CMD=docker
-if hash nvidia-docker 2>/dev/null; then
-  DOCKER_CMD=nvidia-docker
-fi
-
-# Variables to enable remote UI access
-HOST_IP=`hostname -I | awk '{print $1;}'`
-UI_PORT=8060
-INPUT_PORT=8888 #port used to access notebooks
-
-# Run command
-$DOCKER_CMD run -it --rm --name $CONTAINER_NAME \
-      --ipc=host \
-        --env UI_HOST_IP=$HOST_IP \
-        --env UI_PORT=$UI_PORT \
-        --env C_PORT=$INPUT_PORT \
-        --env DATA_DIR=$DATA_DIR \
-        -v $DATA_DIR:$DATA_DIR \
-      -p $INPUT_PORT:8888 \
-        -p $UI_PORT:$UI_PORT \
-      $IMAGE_NAME $ENTRY
-```
-
-## User Interface
-To run the *User Interface* you must be *inside the container* and simply run the `user_interface/app.py` script from the container's terminal.
-```bash
-python /tmp/nemo_asr_app/user_interface/app.py
-```
-
-## Code Structure
-This repository is divided into the following sub-folders each serving different functionalities.
-
-* [notebooks](notebooks): Application’s notebooks that walk through the process of ASR model training and evaluation.
-* [tools](tools): Scripts and tools that enable the system's functionality.
-* [user_interface](user_interface): User Interface files.
-* [run_app.sh](run_app.sh) and [Dockerfile](Dockerfile): Scripts to run the application.
 
 # Automatic Speech Recognition Model and Pipeline
 The Automatic Speech Recognition (ASR) NeMo model used in this application is based on a [Jasper]( https://arxiv.org/abs/1904.03288)-like model named [QuartzNet]( https://nvidia.github.io/NeMo/asr/quartznet.html).  The QuartzNet model can achieve Jasper’s performance but with a lot less parameters (form about 333M to about 19M). This model consists of separable convolutions and larger filters, often denoted by QuartzNet_[BxR], where B is the number of blocks, and R - the number of convolutional sub-blocks within a block. Each sub-block contains a 1-D separable convolution, batch normalization, ReLU, and dropout. To learn more about NeMo’s ASR models see [tutorial](https://nvidia.github.io/NeMo/asr/models.html) and [paper](https://arxiv.org/pdf/1910.10261.pdf).
